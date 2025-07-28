@@ -24,6 +24,10 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
+//Importando VRF
+import {VRFConsumerBaseV2Plus} from "@chainlink/contracts/src/v0.8/vrf/dev/VRFConsumerBaseV2Plus.sol";
+import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/VRFV2PlusClient.sol";
+
 /**
  * @title Raffle Contract
  * @author Gabriel Santa Ritta
@@ -31,7 +35,8 @@ pragma solidity 0.8.19;
  * @dev Implements Chainlink VRFv2.5
  */
 
-contract Raffle {
+//Herdando VRF
+contract Raffle is VRFConsumerBaseV2Plus {
     /** Errors */
     error Raffle__SendMoreToEnterRaffle(); //@dev error personalizado
 
@@ -39,17 +44,33 @@ contract Raffle {
     event RaffleEntered(address indexed player);
 
     /** Variables */
-    uint256 private immutable i_entranceFee; //@dev taxa de entrada
-    uint256 private immutable i_interval; //@dev duração da lotéria em segundos
-    //address[] precisa ser payable para que eu possa transferir ETH para o vencedor
-    address payable[] private s_players; //@dev array de jogadores - storage variable
-    uint256 private s_lastTimeStamp; //@dev timestamp inicial pós implementação de contrato
+    uint16 private constant REQUEST_CONFIRMATIONS = 3; // request de confirmações VRF Chainlink
+    uint32 private constant NUM_WORDS = 1; // num_words VRF Chainlink
+    uint256 private immutable i_entranceFee; // @dev taxa de entrada
+    uint256 private immutable i_interval; // @dev duração da lotéria em segundos
+    bytes32 private immutable i_keyHash; // keyHash VRF Chainlink
+    uint256 private immutable i_subscriptionId; // subs VRF Chainlink 
+    uint32 private immutable i_callbackGasLimit; 
+    // address[] precisa ser payable para que eu possa transferir ETH para o vencedor
+    address payable[] private s_players; // @dev array de jogadores - storage variable
+    uint256 private s_lastTimeStamp; // @dev timestamp inicial pós implementação de contrato
 
     // Inicializando com a taxa de entrada
-    constructor(uint256 entraceFee, uint256 interval) {
+    // Retornando address do VRF
+    constructor(
+        uint256 entraceFee,
+        uint256 interval,
+        address vrfCoordinator,
+        bytes32 gasLane, // keyHash VRF Chainlink
+        uint256 subscriptionId, // subs VRF Chainlink 
+        uint32 callbackGasLimit // gas limit VRF Chainlink
+    ) VRFConsumerBaseV2Plus(vrfCoordinator) {
         i_entranceFee = entraceFee;
         i_interval = interval;
         s_lastTimeStamp = block.timestamp;
+        i_keyHash = gasLane;
+        i_subscriptionId = subscriptionId;
+        i_callbackGasLimit = callbackGasLimit;
     }
 
     // Entrar no sorteio
@@ -61,10 +82,10 @@ contract Raffle {
             revert Raffle__SendMoreToEnterRaffle();
         }
 
-        //Adicionando quem entrou no sorteio a array s_players
+        // Adicionando quem entrou no sorteio a array s_players
         s_players.push(payable(msg.sender)); //msg.sender = address que interagiu com o contrato
 
-        //emitindo um evento para quando o player entrar no sorteio
+        // emitindo um evento para quando o player entrar no sorteio
         emit RaffleEntered(msg.sender);
     }
 
@@ -78,9 +99,32 @@ contract Raffle {
         if ((block.timestamp - s_lastTimeStamp) < i_interval) {
             revert();
         }
+        
+        // Pegue nosso random number da Chainlink
+        // 1. Estruturando request
+        VRFV2PlusClient.RandomWordsRequest memory request = VRFV2PlusClient
+            .RandomWordsRequest({
+                keyHash: i_keyHash,
+                subId: i_subscriptionId,
+                requestConfirmations: REQUEST_CONFIRMATIONS,
+                callbackGasLimit: i_callbackGasLimit,
+                numWords: NUM_WORDS,
+                extraArgs: VRFV2PlusClient._argsToBytes(
+                    // Set nativePayment to true to pay for VRF requests with Sepolia ETH instead of LINK
+                    VRFV2PlusClient.ExtraArgsV1({nativePayment: false})
+                )
+            });
 
-        //Pegue nosso random numer da Chainlink
+        // 2. Enviando request
+        uint256 requestId = s_vrfCoordinator.requestRandomWords(request);
+     
+        // 3. Get
     }
+
+    function fulfillRandomWords(
+        uint256 requestId,
+        uint256[] calldata randomWords
+    ) internal override {}
 
     /** Getter Functions */
 
