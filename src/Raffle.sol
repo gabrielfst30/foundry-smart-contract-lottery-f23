@@ -95,7 +95,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
         3. Chamar automáticamente 
     */
     function pickWinner() external {
-        //@@dev timestamp atual - timestamp contarto < intervalo
+        //@@dev timestamp atual - timestamp contrato < intervalo
         if ((block.timestamp - s_lastTimeStamp) < i_interval) {
             revert();
         }
@@ -115,12 +115,13 @@ contract Raffle is VRFConsumerBaseV2Plus {
                 )
             });
 
-        // 2. Enviando request
+        // 2. Enviando request para o coordinator VRF
         uint256 requestId = s_vrfCoordinator.requestRandomWords(request);
      
-        // 3. Get
+        
     }
 
+    // 3. Get
     function fulfillRandomWords(
         uint256 requestId,
         uint256[] calldata randomWords
