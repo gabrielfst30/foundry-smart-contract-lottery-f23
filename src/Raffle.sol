@@ -64,6 +64,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
     /** Events */
     event RaffleEntered(address indexed player);
+    event WinnerPicker(address indexed winner);
 
     // Inicializando com a taxa de entrada
     // Retornando address do VRF
@@ -145,14 +146,23 @@ contract Raffle is VRFConsumerBaseV2Plus {
         uint256 requestId,
         uint256[] calldata randomWords
     ) internal override {
-        // EXEMPLO
+        // Checks
+        
+        // Lógica explicada
         // s_players = 10 <- tenho 10 players
         // rng = 1223123123  <- recebo um número random
         // 1223123123 % 10 = 2 <- faço uma operação de módulo, o resultado que é o resto dessa divisão, será o número do vencedor.
+        
+        // Effect (Internal Contract States Changes)
         uint256 indexOfWinner = randomWords[0] % s_players.length; // randomWords % módulo de s_players.lenght -> valor
         address payable recentWinner = s_players[indexOfWinner]; // s_players recebe o valor aleatorio e escolhe um player na array
         s_recentWinner = recentWinner; // setando o último vencedor
         s_raffleState = RaffleState.OPEN; // abrindo sorteio após a definição de um novo vencedor
+        s_players = new address payable[](0); // limpando array de jogadores
+        s_lastTimeStamp = block.timestamp; // recomeçando intervalo
+        emit WinnerPicker(s_recentWinner); //emitindo um event do último vencedor
+
+        // Interactions (External Contract Interactions)
         (bool success, ) = recentWinner.call{value: address(this).balance}(""); // pagando o último vencedor com o valor armazenado no contrato
         if (!success) {
             revert Raffle__TransferFailed();
