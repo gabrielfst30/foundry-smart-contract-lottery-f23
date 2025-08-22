@@ -36,14 +36,16 @@ import {VRFV2PlusClient} from "@chainlink/contracts/src/v0.8/vrf/dev/libraries/V
  */
 
 //Herdando VRF
-contract Raffle is VRFConsumerBaseV2Plus {
+contract Raffle is VRFConsumerBaseV2Plus{
     /** Errors */
     error Raffle__SendMoreToEnterRaffle(); //@dev error personalizado
     error Raffle__TransferFailed();
     error Raffle__RaffleNotOpen();
+    error Raffle__UpkeepNotNeeded(uint256 balance, uint256 playersLength, uint256 raffleState); // o erro mostrará o balance do contract, qtd de players e o estado do sorteio
 
     /** Type Declarations */
-    enum RaffleState { // Opções para o estado do sorteio
+    enum RaffleState {
+        // Opções para o estado do sorteio
         OPEN,
         CALCULATING
     }
@@ -81,7 +83,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
         i_keyHash = gasLane;
         i_subscriptionId = subscriptionId;
         i_callbackGasLimit = callbackGasLimit;
-        
+
         s_lastTimeStamp = block.timestamp;
         s_raffleState = RaffleState.OPEN;
     }
@@ -96,7 +98,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
         }
 
         // só entra no sorteio se o estado estiver OPEN
-        if(s_raffleState != RaffleState.OPEN){
+        if (s_raffleState != RaffleState.OPEN) {
             revert Raffle__RaffleNotOpen();
         }
 
@@ -112,10 +114,40 @@ contract Raffle is VRFConsumerBaseV2Plus {
         2. Usar o número randomico to pick a player
         3. Chamar automáticamente 
     */
-    function pickWinner() external {
-        // @@dev timestamp atual - timestamp contrato < intervalo
-        if ((block.timestamp - s_lastTimeStamp) < i_interval) {
-            revert();
+ 
+    /**
+    * Chainlink Automation
+    * Quando é a hora de pegar um vencedor?
+    * @dev Essa é a função que os nodes da Chainlink irá chamar quando o sorteio estiver pronto 
+    para pegar um player vencedor
+    * As condições abaixo em ordem deve ser true para que upkeepNeeded seja true:
+      1. O intervalo de tempo entre as execuções do sorteio passou.
+      2. O sorteio deve estar aberto
+      3. O contrato tem ETH (has players)
+      4. Implicitamente sua subscription tem LINK
+    * @param - ignored
+    * @return upkeepNeeded - se for true, restart no sorteio
+    */
+
+    function checkUpkeep(
+        bytes memory /*checkdata*/
+    ) public view returns (bool upkeepNeeded, bytes memory /* performData */) {
+
+        //condições
+        bool timeHasPassed = ((block.timestamp - s_lastTimeStamp) >= i_interval); // timestamp atual - ultimo timestamp contrato >= intervalo
+        bool isOpen = s_raffleState == RaffleState.OPEN; // Verifica se o sorteio esta aberto
+        bool hasBalance = address(this).balance > 0; // Verifica se existe balance
+        bool hasPlayer = s_players.length > 0; // Verifica se tem players
+        upkeepNeeded = timeHasPassed && isOpen && hasBalance && hasPlayer; // adicionando condições para upkeepNeed rodar caso todas sejam true
+        return (upkeepNeeded, ""); //retornando valores esperados na função
+    }
+
+    // Será automaticamente chamada
+    function performUpkeep(bytes calldata /* performData */) external {
+        (bool upkeepNeeded,) = checkUpkeep("");
+        
+        if(!upkeepNeeded){
+            revert Raffle__UpkeepNotNeeded(address(this).balance, s_players.length, uint256(s_raffleState));
         }
 
         // setando novo estado do sorteio
@@ -137,22 +169,22 @@ contract Raffle is VRFConsumerBaseV2Plus {
             });
 
         // 2. Enviando request para o coordinator VRF
-        uint256 requestId = s_vrfCoordinator.requestRandomWords(request);
+        s_vrfCoordinator.requestRandomWords(request);
     }
 
     // 3. Get VRF após request (callback)
     // Recebe o requestID e retorna randomWords
     function fulfillRandomWords(
-        uint256 requestId,
+       uint256  /*requestId*/,
         uint256[] calldata randomWords
     ) internal override {
         // Checks
-        
+
         // Lógica explicada
         // s_players = 10 <- tenho 10 players
         // rng = 1223123123  <- recebo um número random
         // 1223123123 % 10 = 2 <- faço uma operação de módulo, o resultado que é o resto dessa divisão, será o número do vencedor.
-        
+
         // Effect (Internal Contract States Changes)
         uint256 indexOfWinner = randomWords[0] % s_players.length; // randomWords % módulo de s_players.lenght -> valor
         address payable recentWinner = s_players[indexOfWinner]; // s_players recebe o valor aleatorio e escolhe um player na array
