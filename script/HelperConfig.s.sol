@@ -2,8 +2,15 @@
 pragma solidity 0.8.19;
 
 import {Script} from "forge-std/Script.sol";
+import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 
 abstract contract CodeConstants {
+    /* VRF Mock Values (variáveis esperadas no param do VRF mock)*/
+    uint96 public constant MOCK_BASE_FEE = 0.25 ether;
+    uint96 public constant MOCK_GAS_PRICE_LINK = 1e9;
+    // LINK / ETH PRICE
+    int256 public constant MOCK_WEI_PER_UINT_LINK = 4e15;
+
     uint256 public constant ETH_SEPOLIA_CHAIN_ID = 1115511;
     uint256 public constant LOCAL_CHAIN_ID = 31337;
 }
@@ -35,7 +42,7 @@ contract HelperConfig is CodeConstants, Script {
             return networkConfigs[chainId]; //retornando a chainId escolhida
             // Caso não exista um vrfCoordinator retorne a Chain Local
         } else if (chainId == LOCAL_CHAIN_ID) {
-            getOrCreateAnvilEthConfig();
+            return getOrCreateAnvilEthConfig();
         } else {
             revert HelperConfig__InvalidChainId();
         }
@@ -54,9 +61,30 @@ contract HelperConfig is CodeConstants, Script {
             });
     }
 
+    // Get or Create Anvil Network Config
     function getOrCreateAnvilEthConfig() public returns (NetworkConfig memory) {
+        // Se ja estivermos configurado uma rede local anvil, retornamos a config
         if (localNetworkConfig.vrfCoordinator != address(0)) {
             return localNetworkConfig;
         }
+        // Deployando VRFCoordinator mockado da chainlink
+        vm.startBroadcast();
+        VRFCoordinatorV2_5Mock vrfCoordinatorMock = new VRFCoordinatorV2_5Mock(
+            MOCK_BASE_FEE,
+            MOCK_GAS_PRICE_LINK,
+            MOCK_WEI_PER_UINT_LINK
+        );
+        vm.stopBroadcast();
+
+        localNetworkConfig = NetworkConfig({
+            entranceFee: 0.01 ether, //1e16
+            interval: 30, //30 seconds
+            vrfCoordinator: address(vrfCoordinatorMock), // pegando o address do mock
+            gasLane: 0, // pode ser qualquer coisa, não importa pq é mockado.
+            callbackGasLimit: 500000, //500,000 gas
+            subscriptionId: 0
+        });
+
+        return localNetworkConfig;
     }
 }
