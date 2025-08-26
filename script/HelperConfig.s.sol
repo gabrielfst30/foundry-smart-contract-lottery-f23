@@ -48,6 +48,11 @@ contract HelperConfig is CodeConstants, Script {
         }
     }
 
+    // retorna uma network config
+    function getConfig() public returns (NetworkConfig memory){
+        return getConfigByChainId(block.chainid); //retorna a chainid baseada na validação da função getConfigByChainId
+    }
+
     // SEPOLIA
     function getSepoliaEthConfig() public view returns (NetworkConfig memory) {
         return
