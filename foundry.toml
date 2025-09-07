@@ -2,8 +2,15 @@
 src = "src"
 out = "out"
 libs = ["lib"]
+# Remapear os imports para que o compilador os encontre
 remappings = [
   '@chainlink/contracts/=lib/chainlink-brownie-contracts/contracts/',
+  '@solmate=lib/solmate/src/',
+]
+# Permita o acesso de leitura e escrita aos diretórios de broadcast e reports
+fs_permissions = [
+    { access = "read", path = "./broadcast" },
+    { access = "read", path = "./reports" },
 ]
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
