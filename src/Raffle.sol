@@ -50,8 +50,8 @@ contract Raffle is VRFConsumerBaseV2Plus {
      */
     enum RaffleState {
         // Opções para o estado do sorteio
-        OPEN,
-        CALCULATING
+        OPEN, // 0
+        CALCULATING // 1
     }
 
     /**
@@ -73,20 +73,21 @@ contract Raffle is VRFConsumerBaseV2Plus {
     /**
      * Events
      */
-    event RaffleEntered(address indexed player);
-    event WinnerPicker(address indexed winner);
+    event RaffleEntered(address indexed player); // event para quando um player entrar no sorteio
+    event WinnerPicker(address indexed winner); // event para quando o vencedor for escolhido
+    event RequestRaffleWinner(uint256 indexed requestId); // event para quando o request for enviado para o VRF
 
     // Inicializando com a taxa de entrada
     // Retornando address do VRF
     constructor(
-        uint256 entraceFee,
+        uint256 entranceFee,
         uint256 interval,
         address vrfCoordinator,
         bytes32 gasLane, // keyHash VRF Chainlink
         uint256 subscriptionId, // subs VRF Chainlink
         uint32 callbackGasLimit // gas limit VRF Chainlink
     ) VRFConsumerBaseV2Plus(vrfCoordinator) {
-        i_entranceFee = entraceFee;
+        i_entranceFee = entranceFee;
         i_interval = interval;
         i_keyHash = gasLane;
         i_subscriptionId = subscriptionId;
@@ -137,7 +138,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
      * @param - ignored
      * @return upkeepNeeded - se for true, restart no sorteio
      */
-    function checkUpkeep(bytes memory /*checkdata*/ )
+    function checkUpkeep(bytes memory /*checkdata*/ ) // checando se o upkeep é necessário
         public
         view
         returns (bool upkeepNeeded, bytes memory /* performData */ )
@@ -153,8 +154,9 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
     // Será automaticamente chamada
     function performUpkeep(bytes calldata /* performData */ ) external {
-        (bool upkeepNeeded,) = checkUpkeep("");
+        (bool upkeepNeeded,) = checkUpkeep(""); //checando se o upkeep é necessário
 
+        // Revertendo se o upkeep não for necessário
         if (!upkeepNeeded) {
             revert Raffle__UpkeepNotNeeded(address(this).balance, s_players.length, uint256(s_raffleState));
         }
@@ -176,8 +178,9 @@ contract Raffle is VRFConsumerBaseV2Plus {
             )
         });
 
-        // 2. Enviando request para o coordinator VRF
-        s_vrfCoordinator.requestRandomWords(request);
+        // 2. Enviando request para o coordinator VRF e armazenando o requestId
+        uint256 requestId = s_vrfCoordinator.requestRandomWords(request);
+        emit RequestRaffleWinner(requestId); // emitindo um event do requestId
     }
 
     // 3. Get VRF após request (callback)
@@ -211,7 +214,17 @@ contract Raffle is VRFConsumerBaseV2Plus {
      */
 
     // Get taxa de entrada
-    function getEntraceFee() external view returns (uint256) {
+    function getEntranceFee() external view returns (uint256) {
         return i_entranceFee;
+    }
+
+    // Get raffle state
+    function getRaffleState() external view returns(RaffleState){
+        return s_raffleState;
+    }
+
+    // Get player por index
+    function getPlayer(uint256 index) external view returns (address) {
+        return s_players[index]; // retornando o address do player na posição index
     }
 }
