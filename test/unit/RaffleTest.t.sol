@@ -7,7 +7,7 @@ import {Raffle} from "src/Raffle.sol";
 import {HelperConfig} from "script/HelperConfig.s.sol";
 import {console} from "forge-std/console.sol";
 import {Vm} from "forge-std/Vm.sol";
-
+import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 contract RaffleTest is Test {
     Raffle public raffle;
     HelperConfig public helperConfig;
@@ -204,7 +204,7 @@ contract RaffleTest is Test {
     }
 
     /// @dev Testa se o performUpkeep atualiza o estado do sorteio, emite um request ID e chama o VRFCoordinator.
-    function testPerformUpkeepUpdatesRaffleStateAndEmitsRequestId() public raffleEnteredAndTimePasse {
+    function testPerformUpkeepUpdatesRaffleStateAndEmitsRequestId() public raffleEnteredAndTimePassed {
         /// @Note o requestId tem que retornar maior que 0 e o estado do sorteio deve ser CALCULATING
       
         // Act
@@ -218,4 +218,55 @@ contract RaffleTest is Test {
         assert(uint256(requestId) > 0); // verificando se o requestId é maior que 0
         assert(uint256(rState) == 1); // verificando se o estado do sorteio é CALCULATING
     }
+
+    /// @dev Teste se a função fulfillRandomWords só pode ser chamada após o performUpkeep.
+    function testFulfillRandomWordsCanOnlyBeCalledAfterPerformUpkeep(uint256 randomRequestId) public raffleEnteredAndTimePassed {
+        /// @Note Esperando o revert pois o performUpkeep não foi chamado antes
+        // Arrange / Act / Assert 
+        vm.expectRevert(VRFCoordinatorV2_5Mock.InvalidRequest.selector); // esperando o revert com o erro especifico
+        VRFCoordinatorV2_5Mock(vrfCoordinator).fulfillRandomWords(randomRequestId, address(raffle)); // chamando a função fulfillRandomWords com requestId 0 que não existe
+    }
+
+    /// @dev Testa o processo completo de seleção do vencedor, reinício do sorteio e transferência de fundos.
+    function testFulfillrandomWordsPicksAWinnerResetsAndSendsMoney() public raffleEnteredAndTimePassed {
+        /// @Note Você inicia o startingIndex com 1 e define additionalEntrants como 3 para criar jogadores adicionais com endereços diferentes do primeiro player (PLAYER).
+        // O primeiro player (PLAYER) já entra no sorteio antes do loop, normalmente com índice 0.
+        // No loop, você começa do índice 1 (startingIndex = 1) para evitar sobrescrever ou repetir o endereço do primeiro player.
+        // additionalEntrants = 3 significa que você vai adicionar mais 3 jogadores, totalizando 4 participantes (1 inicial + 3 do loop).
+
+        // Arrange
+        uint256 additionalEntrants = 3; // número de jogadores adicionais (4)
+        uint256 startingIndex = 1; // índice inicial para os jogadores adicionais
+        address expectedWinner = address(1); // definindo o vencedor esperado como o primeiro jogador adicional
+
+        for (uint256 i = startingIndex; i < startingIndex + additionalEntrants; i++) {
+            address newPlayer = address(uint160(i)); // criando um novo address para o jogador
+            hoax(newPlayer, 1 ether); // definindo o próximo tx como vinda do newPlayer com 1 ether de balance
+            raffle.enterRaffle{value: entranceFee}(); // pagando a taxa de entrada
+        }
+
+        uint256 startingTimeStamp = raffle.getLastTimeStamp(); // pegando o ultimo timestamp do sorteio
+        uint256 winningStartingBalance = expectedWinner.balance; // pegando o balance do vencedor esperado antes de receber o prêmio
+
+        // Act
+        vm.recordLogs(); // começando a gravar os logs, quaisquer eventos emitidos serão gravados a partir daqui.
+        raffle.performUpkeep(""); // chamando a função performUpkeep
+        Vm.Log[] memory entries = vm.getRecordedLogs(); // pegando os logs gravados
+        bytes32 requestId = entries[1].topics[1]; // pegando o requestId do evento emitido, nosso evento acontecerá depois do coordinator VRF.
+        VRFCoordinatorV2_5Mock(vrfCoordinator).fulfillRandomWords(uint256(requestId), address(raffle)); // chamando a função fulfillRandomWords com o requestId retornado do evento
+    
+        // Assert
+        address recentWinner = raffle.getRecentWinner(); // pegando o vencedor recente
+        Raffle.RaffleState rState = raffle.getRaffleState(); // pegando o estado atual do sorteio
+        uint256 winnerBalance = recentWinner.balance; // pegando o balance do vencedor
+        uint256 endingTimeStamp = raffle.getLastTimeStamp(); // pegando o ultimo timestamp do sorteio
+        uint256 prize = entranceFee * (additionalEntrants + 1); // calculando o prêmio (taxa de entrada * número de jogadores)
+
+        assert(recentWinner == expectedWinner); // verificando se o vencedor recente é o vencedor esperado
+        // @Note No ambiente de testes com o mock do VRF, normalmente o valor retornado é sempre o mesmo (por padrão, 1)
+        assert(uint256(rState) == 0); // verificando se o estado do sorteio é OPEN
+        assert(winnerBalance == winningStartingBalance + prize); // verificando se o balance do vencedor é igual ao balance inicial + prêmio
+        assert(endingTimeStamp > startingTimeStamp); // verificando se o timestamp foi atualizado
+    }
+
 }
