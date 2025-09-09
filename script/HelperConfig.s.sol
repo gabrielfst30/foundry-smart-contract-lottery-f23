@@ -27,6 +27,7 @@ contract HelperConfig is CodeConstants, Script {
         uint256 subscriptionId; // ID da assinatura VRF
         uint32 callbackGasLimit; // Limite de gás para o callback VRF
         address link; // endereço do token LINK
+        address account; // endereço da conta que deploya o contrato
     }
 
     NetworkConfig public localNetworkConfig; // config para rede local
@@ -51,7 +52,7 @@ contract HelperConfig is CodeConstants, Script {
     }
 
     // retorna uma network config
-    function getConfig() public returns (NetworkConfig memory){
+    function getConfig() public returns (NetworkConfig memory) {
         return getConfigByChainId(block.chainid); //retorna a chainid baseada na validação da função getConfigByChainId
     }
 
@@ -65,8 +66,9 @@ contract HelperConfig is CodeConstants, Script {
                 gasLane: 0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae, //500 gwei hash-SepoliaTestnet
                 callbackGasLimit: 500000, //500,000 gas
                 subscriptionId: 38430831831527318227116343036273060316526555870930394361740204325440722928645,
-                link: 0x779877A7B0D9E8603169DdbD7836e478b4624789 // endereço do token LINK na Sepolia
-                // Para usar o VRF, você precisa pagar as requisições com LINK. O contrato VRFCoordinator consome LINK do saldo da subscription.    
+                link: 0x779877A7B0D9E8603169DdbD7836e478b4624789, // endereço do token LINK na Sepolia
+                // Para usar o VRF, você precisa pagar as requisições com LINK. O contrato VRFCoordinator consome LINK do saldo da subscription.
+                account: 0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38
             });
     }
 
@@ -93,7 +95,8 @@ contract HelperConfig is CodeConstants, Script {
             gasLane: 0, // pode ser qualquer coisa, não importa pq é mockado.
             callbackGasLimit: 500000, //500,000 gas
             subscriptionId: 0,
-            link: address(link) // endereço do token LINK mockado
+            link: address(link), // endereço do token LINK mockado
+            account: msg.sender // endereço da conta que deploya o contrato
         });
 
         return localNetworkConfig;

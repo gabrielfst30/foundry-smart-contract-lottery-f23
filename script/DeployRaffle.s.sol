@@ -21,15 +21,15 @@ contract DeployRaffle is Script {
         // se o subscriptionId for 0, cria uma subscription nova (serve para podermos fazer testes locais)
         if(config.subscriptionId == 0){
             CreateSubscription subscriptionContract = new CreateSubscription(); // instanciando o contrato que criará a subscription
-            (config.subscriptionId, config.vrfCoordinator) = subscriptionContract.createSubscription(config.vrfCoordinator); // criando a subscription passando o vrfCoordinator do config
+            (config.subscriptionId, config.vrfCoordinator) = subscriptionContract.createSubscription(config.vrfCoordinator, config.account); // criando a subscription passando o vrfCoordinator do config
             // Acima, retornamos o subId e o vrfCoordinator e setamos na nossa config
         
         // Fund a subscription se for local
         FundSubscription fundSubscription = new FundSubscription(); // instanciando o contrato que criará a subscription
-        fundSubscription.fundSubscription(config.vrfCoordinator, config.subscriptionId, config.link); // fundando a subscription)
+        fundSubscription.fundSubscription(config.vrfCoordinator, config.subscriptionId, config.link, config.account); // fundando a subscription)
         }
 
-        vm.startBroadcast();
+        vm.startBroadcast(config.account); // iniciando o broadcast com a conta que fará o deploy
         Raffle raffle = new Raffle(
             config.entranceFee,
             config.interval,
@@ -41,7 +41,7 @@ contract DeployRaffle is Script {
         vm.stopBroadcast();
 
         AddConsumer addConsumer = new AddConsumer(); // instanciando o contrato que adicionará o consumer
-        addConsumer.addConsumer(address(raffle), config.vrfCoordinator, config.subscriptionId); // adicionando o consumer
+        addConsumer.addConsumer(address(raffle), config.vrfCoordinator, config.subscriptionId, config.account); // adicionando o consumer
 
         return (raffle, helperConfig);
     }

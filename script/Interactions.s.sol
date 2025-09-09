@@ -19,20 +19,21 @@ contract CreateSubscription is Script {
     function createSubscriptionUsingConfig() public returns (uint256, address) {
         HelperConfig helperConfig = new HelperConfig(); // instanciando helperConfig
         address vrfCoordinator = helperConfig.getConfig().vrfCoordinator; // chamando getConfig() e retornando vrfCoordinator
-        (uint256 subId, ) = createSubscription(vrfCoordinator); // chamando a função que criará a subscription
+        address account = helperConfig.getConfig().account; // pegando a conta que fará o deploy
+        (uint256 subId, ) = createSubscription(vrfCoordinator, account); // chamando a função que criará a subscription
         return (subId, vrfCoordinator); // retornando o subId e o vrfCoordinator
     }
 
     /// @notice Create a subscription
     /// @dev This function creates a subscription using the VRFCoordinator address from the helper config
     function createSubscription(
-        address vrfCoordinator
+        address vrfCoordinator,
+        address account
     ) public returns (uint256, address) {
         console.log("Criando subscription na chain Id: ", block.chainid);
         console.log("Usando o VRFCoordinator: ", vrfCoordinator);
-        vm.startBroadcast();
-        uint256 subId = VRFCoordinatorV2_5Mock(vrfCoordinator)
-            .createSubscription(); // criando a subscription
+        vm.startBroadcast(account); // iniciando o broadcast com a conta que fará o deploy
+        uint256 subId = VRFCoordinatorV2_5Mock(vrfCoordinator).createSubscription(); // criando a subscription
         vm.stopBroadcast();
 
         console.log("Subscription criada com o Id: ", subId);
@@ -61,14 +62,16 @@ contract FundSubscription is Script, CodeConstants {
         address vrfCoordinator = helperConfig.getConfig().vrfCoordinator; // chamando getConfig() e retornando vrfCoordinator
         uint256 subId = helperConfig.getConfig().subscriptionId; // pegando o subId da config
         address linkToken = helperConfig.getConfig().link; // pegando o endereço do token LINK
-        fundSubscription(vrfCoordinator, subId, linkToken); // chamando a função que criará a subscription
+        address account = helperConfig.getConfig().account; // pegando a conta que fará o deploy
+        fundSubscription(vrfCoordinator, subId, linkToken, account); // chamando a função que criará a subscription
     }
 
     // Fund a subscription
     function fundSubscription(
         address vrfCoordinator,
         uint256 subscriptionId,
-        address link
+        address link,
+        address account
     ) public {
         console.log("Funding subscription na chain Id: ", block.chainid);
         console.log("Usando o subscriptionId: ", subscriptionId);
@@ -85,7 +88,7 @@ contract FundSubscription is Script, CodeConstants {
             vm.stopBroadcast();
         } else {
             // Na Sepolia ou outras testnets, transfira o LINK para a subscription
-            vm.startBroadcast();
+            vm.startBroadcast(account); // iniciando o broadcast com a conta que fará o deploy
             LinkToken(link).transferAndCall(
                 vrfCoordinator,
                 FUND_AMOUNT,
@@ -113,15 +116,16 @@ contract AddConsumer is Script {
         HelperConfig helperConfig = new HelperConfig(); // instanciando helperConfig
         uint256 subId = helperConfig.getConfig().subscriptionId; // pegando o subId da config
         address vrfCoordinator = helperConfig.getConfig().vrfCoordinator; // chamando getConfig() e retornando vrfCoordinator
-        addConsumer(mostRecentlyDeployed, vrfCoordinator, subId); // chamando a função que adicionará o consumer
+        address account = helperConfig.getConfig().account; // pegando a conta que fará o deploy
+        addConsumer(mostRecentlyDeployed, vrfCoordinator, subId, account); // chamando a função que adicionará o consumer
     }
 
-    function addConsumer(address contractToAddtoVrf, address vrfCoordinator, uint256 subId) public {
+    function addConsumer(address contractToAddtoVrf, address vrfCoordinator, uint256 subId, address account) public {
         console.log("Adicionando consumer na chain Id: ", block.chainid);
         console.log("Usando o subscriptionId: ", subId);
         console.log("Usando o VRFCoordinator: ", vrfCoordinator);
         console.log("Adicionando o contrato: ", contractToAddtoVrf);
-        vm.startBroadcast();
+        vm.startBroadcast(account); // iniciando o broadcast com a conta que fará o deploy
         // Adicionando o contrato consumer na subscription
         VRFCoordinatorV2_5Mock(vrfCoordinator).addConsumer(
             subId,
