@@ -80,7 +80,7 @@ contract FundSubscription is Script, CodeConstants {
             vm.startBroadcast();
             VRFCoordinatorV2_5Mock(vrfCoordinator).fundSubscription(
                 subscriptionId,
-                FUND_AMOUNT
+                FUND_AMOUNT * 100
             ); // fundando a subscription
             vm.stopBroadcast();
         } else {
@@ -140,6 +140,10 @@ contract AddConsumer is Script {
     }
 }
 
+// O consumer da subscription VRF sempre será o contrato inteligente que faz a solicitação (requestRandomWords) para o Chainlink VRF.
+// Esse contrato é quem recebe o número aleatório via callback (fulfillRandomWords).
+// Por isso, ao criar ou fundear uma subscription, você precisa adicionar o endereço do contrato que vai consumir a aleatoriedade como "consumer" na subscription.
+
 // Você precisa "fundear" (enviar LINK para) sua subscription do VRF Consumer porque o Chainlink VRF utiliza o saldo de LINK da subscription para pagar pelas requisições de aleatoriedade.
 
 // Motivos principais:
@@ -159,3 +163,4 @@ contract AddConsumer is Script {
 
 // Resumindo:
 // A criação da subscription é automática no deploy, mas o fundeamento precisa ser feito manualmente rodando o script FundSubscription.
+
