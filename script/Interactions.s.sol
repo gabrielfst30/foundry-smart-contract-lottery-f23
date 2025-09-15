@@ -84,7 +84,7 @@ contract FundSubscription is Script, CodeConstants {
             ); // fundando a subscription
             vm.stopBroadcast();
         } else {
-            // Na Sepolia ou outras testnets, transfira o LINK para a subscription
+            // Na Sepolia ou outras testnets, transfi ra o LINK para a subscription
             vm.startBroadcast();
             LinkToken(link).transferAndCall(
                 vrfCoordinator,
