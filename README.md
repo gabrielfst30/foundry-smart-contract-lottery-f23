@@ -1,66 +1,94 @@
-## Foundry
+🎰 Lottery / Raffle Smart Contract (Foundry)
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+Este repositório contem um contrato inteligente de sorteio (lottery / raffle) desenvolvido com Foundry, utilizando o serviço VRF (Verifiable Random Function) da Chainlink para garantir aleatoriedade segura. Usuários pagam para entrar no sorteio e um vencedor é escolhido de forma imparcial.
 
-Foundry consists of:
+🚀 Tecnologias e Ferramentas
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+Solidity 0.8.x — Smart contracts na EVM
 
-## Documentation
+Foundry — Forge, Anvil etc., para desenvolvimento, testagem e deploy rápido
 
-https://book.getfoundry.sh/
+Chainlink VRF — Para aleatoriedade criptograficamente verificável
 
-## Usage
+Forge scripts & tests — Automação de deploy e validações com mocks/localchain
 
-### Build
+🔧 Funcionalidades Principais
 
-```shell
-$ forge build
-```
+Participantes podem entrar no sorteio ao pagar uma taxa pré-definida
 
-### Test
+Estado do contrato gerencia se o sorteio está OPEN ou em PROCESSO de cálculo
 
-```shell
-$ forge test
-```
+Uso de Chainlink VRF para solicitar um número aleatório seguro
 
-### Format
+Seleção do vencedor baseada nesse número aleatório
 
-```shell
-$ forge fmt
-```
+Proprietário do contrato (“owner”) pode iniciar o sorteio / finalizar processo
 
-### Gas Snapshots
+📁 Estrutura do Projeto
+foundry-smart-contract-lottery-f23/
+├── src/
+│   └── Lottery.sol            # Contrato principal de sorteio
+├── script/
+│   └── DeployLottery.s.sol    # Script de deploy usando Foundry
+├── test/
+│   └── LotteryTest.t.sol      # Testes do contrato
+├── lib/                       # Dependências externas (via forge install)
+├── foundry.toml               # Configuração do Foundry
+├── .gitignore
+└── README.md
 
-```shell
-$ forge snapshot
-```
+🧪 Como Rodar Localmente / Testar
+Pré-requisitos
 
-### Anvil
+Instalar Foundry (Forge, Anvil)
 
-```shell
-$ anvil
-```
+Ambiente com Solidity compatível
 
-### Deploy
+Passos
+# Clone o repositório
+git clone https://github.com/gabrielfst30/foundry-smart-contract-lottery-f23.git
+cd foundry-smart-contract-lottery-f23
 
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
+# Instale dependências e libs
+forge install
 
-### Cast
+# Compile os contratos
+forge build
 
-```shell
-$ cast <subcommand>
-```
+# Execute os testes
+forge test
 
-### Help
+🌐 Deploy / Uso com Chainlink VRF
 
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+Para usar o contrato de verdade com Chainlink VRF, vai precisar:
+
+Subscription ID ativo da Chainlink VRF
+
+Endereço do coordinator VRF na rede que vai usar
+
+Gas lane / keyHash correto
+
+Configurar limite de gas para callback (callbackGasLimit)
+
+Deploy com parâmetros adequados
+
+Exemplo de comando (ajusta conforme rede):
+
+forge script script/DeployLottery.s.sol:DeployLottery \
+  --rpc-url <URL_DA_REDE> \
+  --private-key <SUA_CHAVE_PRIVADA> \
+  --broadcast
+
+⚠️ Boas Práticas & Considerações
+
+Validar se há participantes suficientes antes de chamar a função de sorteio
+
+Certificar que o contrato possui fundos de LINK (ou recurso que o VRF use) se necessário
+
+Controlar bem o estado interno (ex: OPEN / CALCULATING) para evitar reset ou entradas indevidas
+
+Usar eventos para registrar quando o sorteio é iniciado, random number requisitado e vencedor escolhido — facilita auditoria
+
+👤 Autor
+
+Desenvolvido por Gabriel Santa Ritta — Fullstack / Blockchain Developer dedicado a construir contratos inteligentes seguros, auditáveis e eficientes.
