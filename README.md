@@ -1,8 +1,8 @@
-🎰 Lottery / Raffle Smart Contract (Foundry)
+# 🎰 Lottery / Raffle Smart Contract (Foundry)
 
 Este repositório contem um contrato inteligente de sorteio (lottery / raffle) desenvolvido com Foundry, utilizando o serviço VRF (Verifiable Random Function) da Chainlink para garantir aleatoriedade segura. Usuários pagam para entrar no sorteio e um vencedor é escolhido de forma imparcial.
 
-🚀 Tecnologias e Ferramentas
+# 🚀 Tecnologias e Ferramentas
 
 Solidity 0.8.x — Smart contracts na EVM
 
@@ -12,7 +12,7 @@ Chainlink VRF — Para aleatoriedade criptograficamente verificável
 
 Forge scripts & tests — Automação de deploy e validações com mocks/localchain
 
-🔧 Funcionalidades Principais
+# 🔧 Funcionalidades Principais
 
 Participantes podem entrar no sorteio ao pagar uma taxa pré-definida
 
@@ -24,7 +24,7 @@ Seleção do vencedor baseada nesse número aleatório
 
 Proprietário do contrato (“owner”) pode iniciar o sorteio / finalizar processo
 
-📁 Estrutura do Projeto
+# 📁 Estrutura do Projeto
 foundry-smart-contract-lottery-f23/
 ├── src/
 │   └── Lottery.sol            # Contrato principal de sorteio
@@ -37,7 +37,7 @@ foundry-smart-contract-lottery-f23/
 ├── .gitignore
 └── README.md
 
-🧪 Como Rodar Localmente / Testar
+# 🧪 Como Rodar Localmente / Testar
 Pré-requisitos
 
 Instalar Foundry (Forge, Anvil)
